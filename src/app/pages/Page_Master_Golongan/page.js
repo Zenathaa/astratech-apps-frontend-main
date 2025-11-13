@@ -17,7 +17,12 @@ import { getSSOData, getUserData } from "@/context/user";
 export default function MasterGolonganPage() {
   const router = useRouter();
 
+  // ✅ PERBAIKAN STATE:
+  // allDataGolongan: Menyimpan SEMUA data dari API (misal 16 data)
+  // dataGolongan: Menyimpan data yang SUDAH DIPOTONG (hanya 5 per halaman)
+  const [allDataGolongan, setAllDataGolongan] = useState([]);
   const [dataGolongan, setDataGolongan] = useState([]);
+  
   const [loading, setLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -38,12 +43,12 @@ export default function MasterGolonganPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalData, setTotalData] = useState(0);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(5); // ✅ PERBAIKAN: Diubah ke 5
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState(dataFilterSort[0].Value);
   const [sortStatus, setSortStatus] = useState(dataFilterStatus[0].Value);
 
-  // ✅ Pastikan data user & SSO di-load di sisi client
+  // ✅ Pastikan data user & SSO di-load di sisi client (TETAP SAMA)
   useEffect(() => {
     setIsClient(true);
     const sso = getSSOData();
@@ -57,9 +62,10 @@ export default function MasterGolonganPage() {
     }
   }, [router]);
 
-  // ✅ Fungsi ambil data tabel
+  // ✅ PERBAIKAN: Fungsi ambil data tabel
+  // Fungsi ini sekarang mengambil SEMUA data, BUKAN per halaman
   const loadData = useCallback(
-    async (page, sort, cari, status) => {
+    async (sort, cari, status) => {
       try {
         setLoading(true);
 
@@ -69,91 +75,107 @@ export default function MasterGolonganPage() {
             Status: status,
             ...(cari ? { SearchKeyword: cari } : {}),
             Urut: sort,
-            PageNumber: page,
-            PageSize: pageSize,
+            // PageNumber dan PageSize dihapus, karena DB tidak support
           },
           "GET"
         );
-
-        console.log("Response GetDataGolongan:", response);
 
         if (!response) throw new Error("Tidak ada respon dari server.");
 
         const dataList =
           response.data || response.dataList || response.items || [];
-        const total =
-          response.totalData || response.totalCount || response.total || 0;
-
-        const pagedData = dataList.map((item, index) => ({
-          No: (page - 1) * pageSize + index + 1,
-          id: item.id,
-          "Nama Golongan": item.golonganDesc,
-          Status: item.golonganStatus,
-          "Plafon Obat": item.benPlafonObat ?? "-",
-          "Plafon Lensa Mono": item.benPlafonLensaMono ?? "-",
-          "Plafon Lensa Bi": item.benPlafonLensaBi ?? "-",
-          "Plafon Rangka": item.benPlafonRangka ?? "-",
-          "Status Pernikahan": item.benStatusPernikahan ?? "-",
-          Aksi: [
-            "Detail",
-            ...(isClient && userData?.permission?.includes("master_golongan.edit")
-              ? ["Edit", "Toggle"]
-              : []),
-          ],
-          Alignment: [
-            "center",
-            "left",
-            "center",
-            "center",
-            "center",
-            "center",
-            "center",
-            "center",
-            "center",
-          ],
-        }));
-
-        setDataGolongan(pagedData);
-        setTotalData(total);
-        setCurrentPage(page);
+        
+        // Simpan SEMUA data ke state 'allDataGolongan'
+        setAllDataGolongan(dataList);
+        
+        // Total data dihitung dari JUMLAH data yang diterima
+        setTotalData(dataList.length); 
+        
+        // Selalu reset ke halaman 1 setiap kali filter/search baru
+        setCurrentPage(1); 
+        
       } catch (err) {
         Toast.error(err.message || "Gagal memuat data golongan.");
+        setAllDataGolongan([]);
         setDataGolongan([]);
         setTotalData(0);
       } finally {
         setLoading(false);
       }
     },
-    [pageSize, isClient, userData]
+    [] // Hapus dependensi yang tidak perlu
   );
 
-  // ✅ Fungsi pencarian
+  // ✅ PERBAIKAN: useEffect BARU untuk menangani Paging di Client
+  // Effect ini akan jalan setiap kali 'allDataGolongan' (data master) berubah
+  // atau setiap kali 'currentPage' (halaman) diubah
+  useEffect(() => {
+    
+    // Hitung data mana yang harus ditampilkan
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+
+    // Potong data master (allDataGolongan) sesuai halaman
+    const pagedList = allDataGolongan.slice(startIndex, endIndex);
+
+    // Proses data yang sudah dipotong (5 data)
+    const pagedData = pagedList.map((item, index) => ({
+      // 'No' dihitung berdasarkan 'startIndex' agar urut di semua halaman
+      No: startIndex + index + 1, 
+      id: item.id,
+      "Nama Golongan": item.golonganDesc,
+      Status: item.golonganStatus,
+      "Plafon Obat": item.benPlafonObat ?? "-",
+      "Plafon Lensa Mono": item.benPlafonLensaMono ?? "-",
+      "Plafon Lensa Bi": item.benPlafonLensaBi ?? "-",
+      "Plafon Rangka": item.benPlafonRangka ?? "-",
+      "Status Pernikahan": item.benStatusPernikahan ?? "-",
+      Aksi: [
+        "Detail",
+        ...(isClient && userData?.permission?.includes("master_golongan.edit")
+          ? ["Edit", "Toggle"]
+          : []),
+      ],
+      Alignment: [
+        "center", "left", "center", "center", "center",
+        "center", "center", "center", "center",
+      ],
+    }));
+
+    // Masukkan 5 data yang sudah diproses ke state 'dataGolongan' (untuk ditampilkan)
+    setDataGolongan(pagedData);
+
+  }, [allDataGolongan, currentPage, pageSize, isClient, userData]);
+
+
+  // ✅ PERBAIKAN: Fungsi pencarian
   const handleSearch = useCallback(
     (query) => {
       setSearch(query);
-      setCurrentPage(1);
-      loadData(1, sortBy, query, sortStatus);
+      // 'loadData' tidak perlu 'currentPage' lagi
+      loadData(sortBy, query, sortStatus); 
     },
     [sortBy, sortStatus, loadData]
   );
 
-  // ✅ Filter Sort dan Status
+  // ✅ PERBAIKAN: Filter Sort dan Status
   const handleFilterApply = useCallback(() => {
     const newSortBy = sortRef.current.value;
     const newSortStatus = statusRef.current.value;
 
     setSortBy(newSortBy);
     setSortStatus(newSortStatus);
-    setCurrentPage(1);
-    loadData(1, newSortBy, search, newSortStatus);
+    // 'loadData' tidak perlu 'currentPage' lagi
+    loadData(newSortBy, search, newSortStatus);
   }, [search, loadData]);
 
-  // ✅ Navigasi halaman
+  // ✅ PERBAIKAN: Navigasi halaman
   const handleNavigation = useCallback(
     (page) => {
-      loadData(page, sortBy, search, sortStatus);
+      // Hanya perlu ganti halaman, useEffect di atas akan urus sisanya
+      setCurrentPage(page);
     },
-    [sortBy, search, sortStatus, loadData]
+    [] // Tidak ada dependensi
   );
 
   const handleAdd = useCallback(() => {
@@ -170,7 +192,7 @@ export default function MasterGolonganPage() {
     [router]
   );
 
-  // ✅ Ubah status Golongan (Aktif/Nonaktif)
+  // ✅ PERBAIKAN: Ubah status Golongan
   const handleToggle = useCallback(
     async (id) => {
       const result = await SweetAlert({
@@ -196,24 +218,28 @@ export default function MasterGolonganPage() {
         }
 
         Toast.success("Status golongan berhasil diubah.");
-        loadData(currentPage, sortBy, search, sortStatus);
+        // Panggil ulang 'loadData' untuk refresh SEMUA data
+        loadData(sortBy, search, sortStatus); 
       } catch (err) {
         Toast.error(err.message || "Gagal mengubah status golongan.");
       } finally {
         setLoading(false);
       }
     },
-    [currentPage, sortBy, search, sortStatus, loadData]
+    [sortBy, search, sortStatus, loadData] // update dependensi
   );
 
-  // ✅ Jalankan loadData hanya setelah user & SSO siap
+  // ✅ PERBAIKAN: Jalankan loadData
+  // Dijalankan HANYA saat filter berubah, atau saat pertama kali load
   useEffect(() => {
     if (ssoData && userData) {
-      loadData(currentPage, sortBy, search, sortStatus);
+      loadData(sortBy, search, sortStatus);
     }
-  }, [ssoData, userData, loadData, currentPage, sortBy, search, sortStatus]);
+    // Hapus 'currentPage' dan 'loadData' dari dependensi
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ssoData, userData, sortBy, search, sortStatus]); 
 
-  // ✅ Filter dropdown
+  // ✅ Filter dropdown (TETAP SAMA)
   const filterContent = useMemo(
     () => (
       <>
@@ -238,7 +264,7 @@ export default function MasterGolonganPage() {
     [sortBy, sortStatus]
   );
 
-  // ✅ Cek izin tampil tombol Tambah
+  // ✅ Cek izin tampil tombol Tambah (TETAP SAMA)
   const showAddButton = useMemo(() => {
     if (!isClient || !userData) return false;
     return Array.isArray(userData?.permission)
@@ -246,6 +272,7 @@ export default function MasterGolonganPage() {
       : false;
   }, [isClient, userData]);
 
+  // ✅ Render HTML (TETAP SAMA)
   return (
     <MainContent
       layout="Admin"
@@ -273,16 +300,16 @@ export default function MasterGolonganPage() {
       <div className="row align-items-center g-3">
         <div className="col-12">
           <Table
-            data={dataGolongan}
+            data={dataGolongan} // <-- Ini sudah berisi 5 data
             onDetail={handleDetail}
             onEdit={handleEdit}
             onToggle={handleToggle}
           />
           {totalData > 0 && (
             <Paging
-              pageSize={pageSize}
+              pageSize={pageSize} // <-- Ini isinya 5
               pageCurrent={currentPage}
-              totalData={totalData}
+              totalData={totalData} // <-- Ini isinya 16 (total)
               navigation={handleNavigation}
             />
           )}
