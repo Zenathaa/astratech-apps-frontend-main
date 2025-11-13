@@ -1,0 +1,25 @@
+stages:
+  - build-sonar
+
+image:
+  name: sonarsource/sonar-scanner-cli:11
+  entrypoint: [""]
+
+variables:
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  GIT_DEPTH: "0"
+  DOCKER_DRIVER: overlay2
+
+build-sonar:
+  stage: build-sonar
+  tags:
+    - gl-runner
+  cache:
+    policy: pull-push
+    key: "sonar-cache-$CI_COMMIT_REF_SLUG"
+    paths:
+      - "${SONAR_USER_HOME}/cache"
+      - Dsonar.exclusions=".gitlab-ci.yml,*.gitlab-ci.yml,Dockerfile*,*.dockerfile,.dockerignore,docker-compose*.yml"
+      - sonar-scanner/
+  script:
+    - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}" -Dsonar.qualitygate.wait=true
