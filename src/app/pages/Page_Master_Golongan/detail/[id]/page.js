@@ -2,174 +2,205 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import PropTypes from "prop-types";
-import Button from "@/components/common/Button";
+
+// Layout & Components
 import MainContent from "@/components/layout/MainContent";
+import Button from "@/components/common/Button";
 import Toast from "@/components/common/Toast";
+import SweetAlert from "@/components/common/SweetAlert";
+import Table from "@/components/common/Table";
+
+// Libs
 import { API_LINK } from "@/lib/constant";
 import fetchData from "@/lib/fetch";
 import { decryptIdUrl, encryptIdUrl } from "@/lib/encryptor";
 import DateFormatter from "@/lib/dateFormater";
-import Badge from "@/components/common/Badge";
 
-const DetailItem = ({ label, value }) => (
-  <div className="col-lg-4 mb-3">
-    <div className="detail-item">
-      <small className="text-muted d-block mb-1">
-        <strong>{label}</strong>
-      </small>
-      {value !== null && value !== undefined && value !== "" ? value : "-"}
-    </div>
-  </div>
-);
+// User Data
+import { getSSOData, getUserData } from "@/context/user";
 
-DetailItem.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.node,
-};
-
-export default function DetailInstitusiPage() {
+export default function DetailGolonganPage() {
   const path = useParams();
   const router = useRouter();
   const id = decryptIdUrl(path.id);
-  const [data, setData] = useState(null);
+
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = useCallback(async () => {
-    if (!id) {
-      Toast.error("ID institusi tidak valid.");
-      setLoading(false);
-      router.back();
-      return;
-    }
+  // Permission
+  const [isClient, setIsClient] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [ssoData, setSsoData] = useState(null);
 
+  // Ambil data user
+  useEffect(() => {
+    setIsClient(true);
+    setSsoData(getSSOData());
+    setUserData(getUserData());
+  }, []);
+
+  // Load data tabel
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetchData(
-        `${API_LINK}Institusi/DetailInstitusi/${id}`,
+
+      const res = await fetchData(
+        `${API_LINK}detailGolongan/GetDataDetailGolongan?GolonganId=${id}`,
         {},
         "GET"
       );
-      setData(response);
+
+      setData(res.data || []);
     } catch (err) {
-      Toast.error("Gagal memuat data: " + err.message);
+      Toast.error("Gagal memuat data.");
     } finally {
       setLoading(false);
     }
-  }, [id, router]);
+  }, [id]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (ssoData && userData) {
+      loadData();
+    }
+  }, [ssoData, userData, loadData]);
 
-  const handleEdit = useCallback(() => {
-    router.push(`/pages/pengaturan-dasar/institusi/edit/${encryptIdUrl(id)}`);
-  }, [router, id]);
+  // Edit
+  const handleEdit = useCallback(
+    (benId) => {
+      router.push(
+        `/pages/Page_Master_DetailGolongan/edit?benId=${encryptIdUrl(
+          benId
+        )}&golId=${encryptIdUrl(id)}`
+      );
+    },
+    [router, id]
+  );
 
-  const handleBack = useCallback(() => {
-    router.push("/pages/pengaturan-dasar/institusi");
-  }, [router]);
+  const handleToggleStatus = useCallback(
+    (benId) => {
+      // 1. KEMBALIKAN LOGIKA LAMA: Cari data dan hitung status baru
+      const item = data.find((d) => d.benId === benId); 
+      if (!item) {
+        Toast.error("Data benefit tidak ditemukan.");
+        return;
+      }
+      const currentStatus = item.benStatus; 
+      const newStatus = currentStatus === "Aktif" ? "Tidak Aktif" : "Aktif";
+
+      SweetAlert({
+        title: "Ubah Status",
+        text: `Ubah status menjadi "${newStatus}"?`, // Tampilkan status baru
+        icon: "warning",
+        confirmText: "Ya",
+      }).then(async (ok) => {
+        if (ok) {
+          try {
+            // PERBAIKAN: Panggil endpoint [HttpPost("SetStatus")]
+            await fetchData(
+              `${API_LINK}detailGolongan/SetStatus`, // <-- Rute DTO
+              { benId: benId, newStatus: newStatus }, // <-- Kirim DTO di body
+              "POST" 
+            );
+
+            Toast.success("Status berhasil diperbarui.");
+            loadData();
+          } catch (err) {
+            Toast.error("Gagal mengubah status.");
+          }
+        }
+      });
+    },
+    [data, loadData] // <-- KEMBALIKAN 'data' ke dependensi
+  );
+
+  // Navigasi
+  const handleBack = () => router.push("/pages/Page_Master_Golongan");
+
+  const handleTambah = () =>
+    router.push(
+      `/pages/Page_Master_DetailGolongan/add?golonganId=${encryptIdUrl(id)}`
+    );
+
+  // --- DATA TABEL UNTUK COMPONENT TABLE ---
+  const tableData = data.map((item, index) => {
+    const allowToggle =
+      isClient && userData?.permission?.includes("master_golongan.edit");
+
+    return {
+      Key: item.benId,
+      id: item.benId,
+
+      No: index + 1,
+      "Plafon Obat": `Rp ${item.benPlafonObat?.toLocaleString("id-ID") ?? "-"}`,
+      "Plafon Lensa Mono": `Rp ${
+        item.benPlafonLensaMono?.toLocaleString("id-ID") ?? "-"
+      }`,
+      "Plafon Lensa Bi": `Rp ${
+        item.benPlafonLensaBi?.toLocaleString("id-ID") ?? "-"
+      }`,
+      "Plafon Rangka": `Rp ${
+        item.benPlafonRangka?.toLocaleString("id-ID") ?? "-"
+      }`,
+      "Status Nikah": item.benStatusPernikahan ?? "-",
+      "Tanggal Valid": DateFormatter.formatDate(item.benValidDateFrom),
+      "Tanggal Sampai": DateFormatter.formatDate(item.benValidDateUntil),
+
+      // Wajib: status untuk badge & toggle
+      Status: item.benStatus,
+      benStatus: item.benStatus,
+
+      // Aksi
+      Aksi: allowToggle ? ["Edit", "Toggle"] : ["Edit"],
+
+      // Alignment (jumlah harus sesuai kolom)
+      Alignment: [
+        "center", // no
+        "center", // plafon obat
+        "center", // mono
+        "center", // bi
+        "center", // rangka
+        "center", // nikah
+        "center", // valid
+        "center", // sampai
+        "center", // status
+        "center", // aksi
+      ],
+    };
+  });
 
   return (
     <MainContent
       layout="Admin"
       loading={loading}
-      title="Detail Institusi"
+      title="Detail Benefit Golongan"
       breadcrumb={[
         { label: "Beranda", href: "/" },
         { label: "Pengaturan Dasar" },
-        {
-          label: "Institusi",
-          href: "/pages/pengaturan-dasar/institusi",
-        },
-        { label: "Detail" },
+        { label: "Golongan", href: "/pages/Page_Master_Golongan" },
+        { label: "Detail Benefit" },
       ]}
     >
+      <div className="mb-3">
+        <Button
+          classType="primary"
+          iconName="plus"
+          label="Tambah Data Benefit"
+          onClick={handleTambah}
+        />
+      </div>
+
       <div className="card border-0 shadow-lg">
         <div className="card-body p-4">
-          {data && (
-            <>
-              <div className="mb-4">
-                <h5 className="text-primary mb-3 pb-2 border-bottom">
-                  Informasi Umum
-                </h5>
-                <div className="row">
-                  <DetailItem
-                    label="Nama Institusi"
-                    value={data.namaInstitusi}
-                  />
-                  <DetailItem label="Alamat" value={data.alamat} />
-                  <DetailItem label="Kode Pos" value={data.kodePos} />
-                  <DetailItem label="Telepon" value={data.telepon} />
-                  <DetailItem label="Fax" value={data.fax} />
-                  <DetailItem label="Email" value={data.email} />
-                  <DetailItem label="Website" value={data.website} />
-                  <DetailItem
-                    label="Status"
-                    value={<Badge status={data.status} />}
-                  />
-                </div>
-              </div>
-              <div className="mb-4">
-                <h5 className="text-primary mb-3 pb-2 border-bottom">
-                  Informasi Pimpinan
-                </h5>
-                <div className="row">
-                  <DetailItem label="Direktur" value={data.namaDirektur} />
-                  <DetailItem
-                    label="Wakil Direktur 1"
-                    value={data.namaWadir1}
-                  />
-                  <DetailItem
-                    label="Wakil Direktur 2"
-                    value={data.namaWadir2}
-                  />
-                  <DetailItem
-                    label="Wakil Direktur 3"
-                    value={data.namaWadir3}
-                  />
-                  <DetailItem
-                    label="Wakil Direktur 4"
-                    value={data.namaWadir4}
-                  />
-                </div>
-              </div>
-              <div className="mb-4">
-                <h5 className="text-primary mb-3 pb-2 border-bottom">
-                  Informasi Legal
-                </h5>
-                <div className="row">
-                  <DetailItem
-                    label="Tanggal Berdiri"
-                    value={DateFormatter.formatDateLong(data.tanggalBerdiri)}
-                  />
-                  <DetailItem label="Nomor SK" value={data.nomorSK} />
-                  <DetailItem
-                    label="Tanggal SK"
-                    value={DateFormatter.formatDateLong(data.tanggalSK)}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-          <div className="row mt-4">
-            <div className="col-12">
-              <div className="d-flex justify-content-end gap-2">
-                <Button
-                  classType="secondary"
-                  label="Kembali"
-                  onClick={handleBack}
-                  type="button"
-                />
-                <Button
-                  classType="primary"
-                  iconName="pencil"
-                  label="Edit"
-                  onClick={handleEdit}
-                  type="button"
-                />
-              </div>
-            </div>
+          <Table
+            data={tableData}
+            onEdit={handleEdit}
+            onToggle={handleToggleStatus}
+          />
+        </div>
+
+        <div className="card-footer bg-white p-4">
+          <div className="d-flex justify-content-end">
+            <Button classType="secondary" label="Kembali" onClick={handleBack} />
           </div>
         </div>
       </div>

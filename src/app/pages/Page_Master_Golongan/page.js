@@ -109,43 +109,38 @@ export default function MasterGolonganPage() {
   // ✅ PERBAIKAN: useEffect BARU untuk menangani Paging di Client
   // Effect ini akan jalan setiap kali 'allDataGolongan' (data master) berubah
   // atau setiap kali 'currentPage' (halaman) diubah
-  useEffect(() => {
-    
-    // Hitung data mana yang harus ditampilkan
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
+useEffect(() => {
 
-    // Potong data master (allDataGolongan) sesuai halaman
-    const pagedList = allDataGolongan.slice(startIndex, endIndex);
+  // Hitung range data yang ditampilkan
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
 
-    // Proses data yang sudah dipotong (5 data)
-    const pagedData = pagedList.map((item, index) => ({
-      // 'No' dihitung berdasarkan 'startIndex' agar urut di semua halaman
-      No: startIndex + index + 1, 
-      id: item.id,
-      "Nama Golongan": item.golonganDesc,
-      Status: item.golonganStatus,
-      "Plafon Obat": item.benPlafonObat ?? "-",
-      "Plafon Lensa Mono": item.benPlafonLensaMono ?? "-",
-      "Plafon Lensa Bi": item.benPlafonLensaBi ?? "-",
-      "Plafon Rangka": item.benPlafonRangka ?? "-",
-      "Status Pernikahan": item.benStatusPernikahan ?? "-",
-      Aksi: [
-        "Detail",
-        ...(isClient && userData?.permission?.includes("master_golongan.edit")
-          ? ["Edit", "Toggle"]
-          : []),
-      ],
-      Alignment: [
-        "center", "left", "center", "center", "center",
-        "center", "center", "center", "center",
-      ],
-    }));
+  // Ambil data per halaman
+  const pagedList = allDataGolongan.slice(startIndex, endIndex);
 
-    // Masukkan 5 data yang sudah diproses ke state 'dataGolongan' (untuk ditampilkan)
-    setDataGolongan(pagedData);
+  // Map data untuk tabel
+  const pagedData = pagedList.map((item, index) => ({
+    No: startIndex + index + 1,
+    id: item.id,
+    "Nama Golongan": item.golonganDesc,
+    Status: item.golonganStatus,
 
-  }, [allDataGolongan, currentPage, pageSize, isClient, userData]);
+    Aksi: [
+      "Detail",
+      ...(isClient && userData?.permission?.includes("master_golongan.edit")
+        ? ["Edit", "Toggle"]
+        : []),
+    ],
+
+    // Jumlah alignment harus sesuai jumlah kolom
+    Alignment: ["center", "left", "center", "center"],
+  }));
+
+  // Set hasil final ke state
+  setDataGolongan(pagedData);
+
+}, [allDataGolongan, currentPage, pageSize, isClient, userData]);
+
 
 
   // ✅ PERBAIKAN: Fungsi pencarian
