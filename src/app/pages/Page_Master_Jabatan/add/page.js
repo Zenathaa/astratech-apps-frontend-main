@@ -10,12 +10,12 @@ import fetchData from "@/lib/fetch";
 import Toast from "@/components/common/Toast";
 
 const maxLengthRules = {
-  golonganDesc: 100,
+  jabatanDeskripsi: 100,
 };
 
-export default function AddGolonganPage() {
+export default function AddJabatanPage() {
   const [formData, setFormData] = useState({
-    golonganDesc: "",
+    jabatanDeskripsi: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -36,8 +36,8 @@ export default function AddGolonganPage() {
 
   const validateForm = useCallback(() => {
     const newErrors = {};
-    if (!formData.golonganDesc || !formData.golonganDesc.trim()) {
-      newErrors.golonganDesc = "Nama golongan wajib diisi";
+    if (!formData.jabatanDeskripsi || !formData.jabatanDeskripsi.trim()) {
+      newErrors.jabatanDeskripsi = "Nama jabatan wajib diisi";
     }
 
     setErrors(newErrors);
@@ -46,7 +46,7 @@ export default function AddGolonganPage() {
 
   const reset = useCallback(() => {
     setFormData({
-      golonganDesc: "",
+      jabatanDeskripsi: "",
     });
   }, []);
 
@@ -63,25 +63,25 @@ export default function AddGolonganPage() {
 
       try {
         const payload = {
-          golonganDesc: formData.golonganDesc.trim(),
-          golonganCreatedBy: "user_adminhrd", 
+          jabatanDeskripsi: formData.jabatanDeskripsi.trim(),
+          jabatanCreatedBy: "user_adminhrd", 
         };
 
         const data = await fetchData(
-          API_LINK + "Golongan/CreateGolongan",
+          API_LINK + "Jabatan/CreateJabatan",
           payload,
           "POST"
         );
 
         if (data && (data.message === "SUCCESS" || data.message === "Berhasil")) {
-          Toast.success("Data golongan berhasil ditambahkan.");
+          Toast.success("Data jabatan berhasil ditambahkan.");
           reset();
-          router.push("/pages/Page_Master_Golongan");
+          router.push("/pages/Page_Master_Jabatan");
         } else {
           Toast.error(data?.message || "Terjadi kesalahan. Silakan coba lagi.");
         }
       } catch (err) {
-        console.error("Error saat menyimpan golongan:", err);
+        console.error("Error saat menyimpan jabatan:", err);
         Toast.error("Data gagal disimpan! " + (err.message || ""));
       } finally {
         setLoading(false);
@@ -99,11 +99,11 @@ export default function AddGolonganPage() {
     <MainContent
       layout="Admin"
       loading={loading}
-      title="Tambah Golongan Baru"
+      title="Tambah Jabatan Baru"
       breadcrumb={[
         { label: "Beranda", href: "/" },
         { label: "Pengaturan Dasar" },
-        { label: "Golongan", href: "/pages/Page_Master_Golongan/golongan" },
+        { label: "Jabatan", href: "/pages/Page_Master_Jabatan" },
         { label: "Tambah" },
       ]}
     >
@@ -113,13 +113,13 @@ export default function AddGolonganPage() {
             <div className="row">
               <div className="col-lg-6">
                 <Input
-                  label="Nama Golongan"
-                  name="golonganDesc"
-                  id="golonganDesc"
-                  value={formData.golonganDesc}
+                  label="Nama Jabatan"
+                  name="jabatanDeskripsi"
+                  id="jabatanDeskripsi"
+                  value={formData.jabatanDeskripsi}
                   onChange={handleChange}
-                  error={errors.golonganDesc}
-                  maxLength={maxLengthRules.golonganDesc}
+                  error={errors.jabatanDeskripsi}
+                  maxLength={maxLengthRules.jabatanDeskripsi}
                 />
               </div>
             </div>

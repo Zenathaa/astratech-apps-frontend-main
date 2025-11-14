@@ -9,7 +9,6 @@ import Toast from "@/components/common/Toast";
 import { API_LINK } from "@/lib/constant";
 import fetchData from "@/lib/fetch";
 import { decryptIdUrl, encryptIdUrl } from "@/lib/encryptor";
-import DateFormatter from "@/lib/dateFormater";
 import Badge from "@/components/common/Badge";
 
 const DetailItem = ({ label, value }) => (
@@ -28,16 +27,16 @@ DetailItem.propTypes = {
   value: PropTypes.node,
 };
 
-export default function DetailInstitusiPage() {
+export default function DetailGolonganPage() {
   const path = useParams();
   const router = useRouter();
-  const id = decryptIdUrl(path.id);
+  const id = decryptIdUrl(path.id); 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     if (!id) {
-      Toast.error("ID institusi tidak valid.");
+      Toast.error("ID golongan tidak valid.");
       setLoading(false);
       router.back();
       return;
@@ -46,13 +45,31 @@ export default function DetailInstitusiPage() {
     try {
       setLoading(true);
       const response = await fetchData(
-        `${API_LINK}Institusi/DetailInstitusi/${id}`,
+        `${API_LINK}Golongan/GetListGolongan?Id=${encodeURIComponent(id)}`,
         {},
         "GET"
       );
-      setData(response);
+
+      const g = response?.data?.[0];
+
+      if (!g) {
+        Toast.error("Data golongan tidak ditemukan.");
+        setData(null);
+      } else {
+        setData({
+          golonganDesc: g.gol_desc,
+          golonganStatus: g.gol_status,
+          BenPlafonObat: g.ben_plafon_obat ?? null,
+          BenPlafonLensaMono: g.ben_plafon_lensa_mono ?? null,
+          BenPlafonLensaBi: g.ben_plafon_lensa_bi ?? null,
+          BenPlafonRangka: g.ben_plafon_rangka ?? null,
+          BenStatusPernikahan: g.ben_status_pernikahan ?? null,
+        });
+      }
     } catch (err) {
-      Toast.error("Gagal memuat data: " + err.message);
+      console.error(err);
+      Toast.error("Gagal memuat data golongan.");
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -63,112 +80,56 @@ export default function DetailInstitusiPage() {
   }, [loadData]);
 
   const handleEdit = useCallback(() => {
-    router.push(`/pages/pengaturan-dasar/institusi/edit/${encryptIdUrl(id)}`);
+    router.push(`/pages/Page_Master_Golongan/edit/${encryptIdUrl(id)}`);
   }, [router, id]);
 
   const handleBack = useCallback(() => {
-    router.push("/pages/pengaturan-dasar/institusi");
+    router.push("/pages/Page_Master_Golongan");
   }, [router]);
 
   return (
     <MainContent
       layout="Admin"
       loading={loading}
-      title="Detail Institusi"
+      title="Detail Golongan"
       breadcrumb={[
         { label: "Beranda", href: "/" },
         { label: "Pengaturan Dasar" },
-        {
-          label: "Institusi",
-          href: "/pages/pengaturan-dasar/institusi",
-        },
+        { label: "Golongan", href: "/pages/Page_Master_Golongan" },
         { label: "Detail" },
       ]}
     >
       <div className="card border-0 shadow-lg">
         <div className="card-body p-4">
-          {data && (
-            <>
-              <div className="mb-4">
-                <h5 className="text-primary mb-3 pb-2 border-bottom">
-                  Informasi Umum
-                </h5>
-                <div className="row">
-                  <DetailItem
-                    label="Nama Institusi"
-                    value={data.namaInstitusi}
-                  />
-                  <DetailItem label="Alamat" value={data.alamat} />
-                  <DetailItem label="Kode Pos" value={data.kodePos} />
-                  <DetailItem label="Telepon" value={data.telepon} />
-                  <DetailItem label="Fax" value={data.fax} />
-                  <DetailItem label="Email" value={data.email} />
-                  <DetailItem label="Website" value={data.website} />
-                  <DetailItem
-                    label="Status"
-                    value={<Badge status={data.status} />}
-                  />
-                </div>
-              </div>
-              <div className="mb-4">
-                <h5 className="text-primary mb-3 pb-2 border-bottom">
-                  Informasi Pimpinan
-                </h5>
-                <div className="row">
-                  <DetailItem label="Direktur" value={data.namaDirektur} />
-                  <DetailItem
-                    label="Wakil Direktur 1"
-                    value={data.namaWadir1}
-                  />
-                  <DetailItem
-                    label="Wakil Direktur 2"
-                    value={data.namaWadir2}
-                  />
-                  <DetailItem
-                    label="Wakil Direktur 3"
-                    value={data.namaWadir3}
-                  />
-                  <DetailItem
-                    label="Wakil Direktur 4"
-                    value={data.namaWadir4}
-                  />
-                </div>
-              </div>
-              <div className="mb-4">
-                <h5 className="text-primary mb-3 pb-2 border-bottom">
-                  Informasi Legal
-                </h5>
-                <div className="row">
-                  <DetailItem
-                    label="Tanggal Berdiri"
-                    value={DateFormatter.formatDateLong(data.tanggalBerdiri)}
-                  />
-                  <DetailItem label="Nomor SK" value={data.nomorSK} />
-                  <DetailItem
-                    label="Tanggal SK"
-                    value={DateFormatter.formatDateLong(data.tanggalSK)}
-                  />
-                </div>
-              </div>
-            </>
+          {data ? (
+            <div className="row">
+              <DetailItem label="Nama Golongan" value={data.golonganDesc} />
+              <DetailItem label="Status" value={<Badge status={data.golonganStatus} />} />
+              <DetailItem label="Plafon Obat" value={data.BenPlafonObat} />
+              <DetailItem label="Plafon Lensa Mono" value={data.BenPlafonLensaMono} />
+              <DetailItem label="Plafon Lensa Bi" value={data.BenPlafonLensaBi} />
+              <DetailItem label="Plafon Rangka" value={data.BenPlafonRangka} />
+              <DetailItem label="Status Pernikahan" value={data.BenStatusPernikahan} />
+            </div>
+          ) : (
+            <p className="text-center text-muted">Tidak ada data untuk golongan ini.</p>
           )}
+
           <div className="row mt-4">
-            <div className="col-12">
-              <div className="d-flex justify-content-end gap-2">
-                <Button
-                  classType="secondary"
-                  label="Kembali"
-                  onClick={handleBack}
-                  type="button"
-                />
-                <Button
-                  classType="primary"
-                  iconName="pencil"
-                  label="Edit"
-                  onClick={handleEdit}
-                  type="button"
-                />
-              </div>
+            <div className="col-12 d-flex justify-content-end gap-2">
+              <Button
+                classType="secondary"
+                label="Kembali"
+                onClick={handleBack}
+                type="button"
+              />
+              <Button
+                classType="primary"
+                iconName="pencil"
+                label="Edit"
+                onClick={handleEdit}
+                type="button"
+              />
             </div>
           </div>
         </div>
