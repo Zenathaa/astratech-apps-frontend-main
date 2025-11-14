@@ -10,7 +10,7 @@ import fetchData from "@/lib/fetch";
 import { API_LINK } from "@/lib/constant";
 import { decryptIdUrl } from "@/lib/encryptor";
 
-export default function EditGolonganPage() {
+export default function EditJabatanPage() {
   const { id: encryptedId } = useParams();
   const router = useRouter();
   const id = decryptIdUrl(encryptedId);
@@ -18,33 +18,33 @@ export default function EditGolonganPage() {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     id: "", 
-    golonganDesc: "",
+    jabatanDesc: "",
   });
 
   const loadDetail = useCallback(async () => {
     if (!id) {
-      Toast.error("ID golongan tidak valid.");
+      Toast.error("ID jabatan tidak valid.");
       router.back();
       return;
     }
 
     try {
       setLoading(true);
-      const res = await fetchData(`${API_LINK}Golongan/GetListGolongan/${id}`, {}, "GET");
+      const res = await fetchData(`${API_LINK}Jabatan/GetListJabatan/${id}`, {}, "GET");
 
       if (!res) {
-        Toast.error("Data golongan tidak ditemukan.");
+        Toast.error("Data jabatan tidak ditemukan.");
         router.back();
         return;
       }
 
       setFormData({
         id: res.id ?? id,
-        golonganDesc: res.golonganDesc ?? "",
+        jabatanDesc: res.jabatanDeskripsi ?? "",
       });
     } catch (err) {
       console.error("loadDetail error:", err);
-      Toast.error("Gagal memuat data golongan.");
+      Toast.error("Gagal memuat data jabatan.");
       router.back();
     } finally {
       setLoading(false);
@@ -68,25 +68,19 @@ export default function EditGolonganPage() {
       e.preventDefault();
       setLoading(true);
 
-      if (!formData.golonganDesc.trim()) {
-        Toast.error("Nama golongan wajib diisi.");
-        setLoading(false);
-        return;
-      }
-
       try {
         const payload = {
           Id: formData.id,
-          GolonganDesc: formData.golonganDesc.trim(),
+          JabatanDeskripsi: formData.jabatanDesc.trim(),
         };
 
         console.log("Payload:", payload);
 
-        const res = await fetchData(`${API_LINK}Golongan/EditGolongan`, payload, "PUT");
+        const res = await fetchData(`${API_LINK}Jabatan/EditJabatan`, payload, "PUT");
 
         if (res?.message?.toUpperCase() === "SUCCESS") {
-          Toast.success("Data golongan berhasil diperbarui!");
-          router.push("/pages/Page_Master_Golongan");
+          Toast.success("Data jabatan berhasil diperbarui!");
+          router.push("/pages/Page_Master_Jabatan");
         } else {
           Toast.error(res?.message || "Gagal memperbarui data.");
         }
@@ -106,11 +100,11 @@ export default function EditGolonganPage() {
     <MainContent
       layout="Admin"
       loading={loading}
-      title="Edit Golongan"
+      title="Edit Jabatan"
       breadcrumb={[
         { label: "Beranda", href: "/" },
         { label: "Pengaturan Dasar" },
-        { label: "Golongan", href: "/pages/Page_Master_Golongan" },
+        { label: "Jabatan", href: "/pages/Page_Master_Jabatan" },
         { label: "Edit" },
       ]}
     >
@@ -120,9 +114,9 @@ export default function EditGolonganPage() {
             <div className="row g-3">
               <div className="col-lg-6">
                 <Input
-                  label="Nama Golongan"
-                  name="golonganDesc"
-                  value={formData.golonganDesc}
+                  label="Nama Jabatan"
+                  name="jabatanDesc"
+                  value={formData.jabatanDesc}
                   onChange={handleChange}
                   required
                 />
@@ -143,7 +137,7 @@ export default function EditGolonganPage() {
                   iconName="save"
                   label={loading ? "Menyimpan..." : "Simpan Perubahan"}
                   type="submit"
-                  isDisabled={loading || !formData.golonganDesc.trim()}
+                  isDisabled={loading || !formData.jabatanDesc.trim()}
                 />
               </div>
             </div>

@@ -14,11 +14,11 @@ import { encryptIdUrl } from "@/lib/encryptor";
 import SweetAlert from "@/components/common/SweetAlert";
 import { getSSOData, getUserData } from "@/context/user";
 
-export default function MasterGolonganPage() {
+export default function MasterJabatanPage() {
   const router = useRouter();
 
-  const [allDataGolongan, setAllDataGolongan] = useState([]);
-  const [dataGolongan, setDataGolongan] = useState([]);
+  const [allDataJabatan, setAllDataJabatan] = useState([]);
+  const [dataJabatan, setDataJabatan] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -29,8 +29,8 @@ export default function MasterGolonganPage() {
 
   const dataFilterSort = useMemo(
     () => [
-      { Value: "[gol_desc] asc", Text: "Nama Golongan [↑]" },
-      { Value: "[gol_desc] desc", Text: "Nama Golongan [↓]" },
+      { Value: "[jab_desc] asc", Text: "Nama Jabatan [↑]" },
+      { Value: "[jab_desc] desc", Text: "Nama Jabatan [↓]" },
     ],
     []
   );
@@ -44,11 +44,11 @@ export default function MasterGolonganPage() {
   );
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalData, setTotalData] = useState(0);
   const [pageSize] = useState(5);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("[id] asc");
   const [sortStatus, setSortStatus] = useState("Aktif");
-  const [totalData, setTotalData] = useState(0);
 
   useEffect(() => {
     setIsClient(true);
@@ -63,39 +63,41 @@ export default function MasterGolonganPage() {
     }
   }, [router]);
 
-  const loadData = useCallback(async (sort = sortBy, keyword = search, status = sortStatus) => {
+  const loadData = useCallback(async (sort, cari, status) => {
     try {
       setLoading(true);
+
       const params = new URLSearchParams();
-      if (keyword) params.append("SearchKeyword", keyword);
+      if (cari) params.append("SearchKeyword", cari);
       if (status) params.append("Status", status);
       if (sort) params.append("Urut", sort);
 
-      const url = `${API_LINK}Golongan/GetDataGolongan?${params.toString()}`;
+      const url = `${API_LINK}Jabatan/GetDataJabatan?${params.toString()}`;
       const response = await fetchData(url, {}, "GET");
 
       if (!response) throw new Error("Tidak ada respon dari server.");
+
       const dataList = response.data || response.dataList || response.items || [];
 
-      setAllDataGolongan(dataList);
+      setAllDataJabatan(dataList);
       setTotalData(dataList.length);
       setCurrentPage(1);
     } catch (err) {
-      Toast.error(err.message || "Gagal memuat data golongan.");
-      setAllDataGolongan([]);
-      setDataGolongan([]);
+      Toast.error(err.message || "Gagal memuat data jabatan.");
+      setAllDataJabatan([]);
+      setDataJabatan([]);
       setTotalData(0);
     } finally {
       setLoading(false);
     }
-  }, [sortBy, search, sortStatus]);
+  }, []);
 
   useEffect(() => {
-    let temp = [...allDataGolongan];
+    let temp = [...allDataJabatan];
 
     if (search.trim() !== "") {
       temp = temp.filter((item) =>
-        (item.golonganDesc || item.GolonganDesc || "")
+        (item.jabatanDeskripsi || item.JabatanDesc || "")
           .toLowerCase()
           .includes(search.toLowerCase())
       );
@@ -103,41 +105,46 @@ export default function MasterGolonganPage() {
 
     if (sortStatus) {
       temp = temp.filter(
-        (item) => (item.golonganStatus || item.Status || "Aktif") === sortStatus
+        (item) => (item.jabatanStatus || item.Status || "Aktif") === sortStatus
       );
     }
 
     if (sortBy === "[id] asc") temp.sort((a, b) => a.id - b.id);
     else if (sortBy === "[id] desc") temp.sort((a, b) => b.id - a.id);
-    else if (sortBy === "[gol_desc] asc")
+    else if (sortBy === "[jab_desc] asc")
       temp.sort((a, b) =>
-        (a.golonganDesc || a.GolonganDesc || "").localeCompare(b.golonganDesc || b.GolonganDesc || "")
+        (a.jabatanDeskripsi || a.JabatanDesc || "").localeCompare(
+          b.jabatanDeskripsi || b.JabatanDesc || ""
+        )
       );
-    else if (sortBy === "[gol_desc] desc")
+    else if (sortBy === "[jab_desc] desc")
       temp.sort((a, b) =>
-        (b.golonganDesc || b.GolonganDesc || "").localeCompare(a.golonganDesc || a.GolonganDesc || "")
+        (b.jabatanDeskripsi || b.JabatanDesc || "").localeCompare(
+          a.jabatanDeskripsi || a.JabatanDesc || ""
+        )
       );
 
     const startIndex = (currentPage - 1) * pageSize;
-    const pagedList = temp.slice(startIndex, startIndex + pageSize);
+    const endIndex = startIndex + pageSize;
+    const pagedList = temp.slice(startIndex, endIndex);
 
-    const tableData = pagedList.map((item, idx) => ({
-      No: startIndex + idx + 1,
+    const pagedData = pagedList.map((item, index) => ({
+      No: startIndex + index + 1,
       id: item.id,
-      "Nama Golongan": item.golonganDesc || item.GolonganDesc || "",
-      Status: item.golonganStatus || item.Status || "Aktif",
+      "Nama Jabatan": item.jabatanDeskripsi || item.JabatanDesc || "",
+      Status: item.jabatanStatus || item.Status || "Aktif",
       Aksi: [
         "Detail",
-        ...(isClient && userData?.permission?.includes("master_golongan.edit")
+        ...(isClient && userData?.permission?.includes("master_jabatan.edit")
           ? ["Edit", "Toggle"]
           : []),
       ],
       Alignment: ["center", "center", "center", "center"],
     }));
 
-    setDataGolongan(tableData);
+    setDataJabatan(pagedData);
     setTotalData(temp.length);
-  }, [allDataGolongan, search, currentPage, pageSize, sortBy, sortStatus, isClient, userData]);
+  }, [allDataJabatan, search, currentPage, pageSize, sortBy, sortStatus, isClient, userData]);
 
   const handleSearch = useCallback(
     (query) => {
@@ -150,28 +157,30 @@ export default function MasterGolonganPage() {
   const handleFilterApply = useCallback(() => {
     const newSortBy = sortRef.current?.value || sortBy;
     const newSortStatus = statusRef.current?.value || sortStatus;
+
     setSortBy(newSortBy);
     setSortStatus(newSortStatus);
+
     loadData(newSortBy, search, newSortStatus);
   }, [sortBy, sortStatus, search, loadData]);
 
   const handleNavigation = useCallback((page) => setCurrentPage(page), []);
 
-  const handleAdd = useCallback(() => router.push("/pages/Page_Master_Golongan/add"), [router]);
+  const handleAdd = useCallback(() => router.push("/pages/Page_Master_Jabatan/add"), [router]);
   const handleDetail = useCallback(
-    (id) => router.push(`/pages/Page_Master_Golongan/detail/${encryptIdUrl(id)}`),
+    (id) => router.push(`/pages/Page_Master_Jabatan/detail/${encryptIdUrl(id)}`),
     [router]
   );
   const handleEdit = useCallback(
-    (id) => router.push(`/pages/Page_Master_Golongan/edit/${encryptIdUrl(id)}`),
+    (id) => router.push(`/pages/Page_Master_Jabatan/edit/${encryptIdUrl(id)}`),
     [router]
   );
 
   const handleToggle = useCallback(
     async (id) => {
       const result = await SweetAlert({
-        title: "Ubah Status Golongan",
-        text: "Apakah Anda yakin ingin mengubah status golongan ini?",
+        title: "Ubah Status Jabatan",
+        text: "Apakah Anda yakin ingin mengubah status jabatan ini?",
         icon: "warning",
         confirmText: "Ya, ubah!",
       });
@@ -179,11 +188,11 @@ export default function MasterGolonganPage() {
 
       setLoading(true);
       try {
-        await fetchData(`${API_LINK}Golongan/SetStatusGolongan/${id}`, {}, "POST");
-        Toast.success("Status golongan berhasil diubah.");
+        await fetchData(`${API_LINK}Jabatan/SetStatusJabatan/${id}`, {}, "POST");
+        Toast.success("Status jabatan berhasil diubah.");
         await loadData(sortBy, search, sortStatus);
       } catch (err) {
-        Toast.error(err.message || "Gagal mengubah status golongan.");
+        Toast.error(err.message || "Gagal mengubah status jabatan.");
       } finally {
         setLoading(false);
       }
@@ -193,29 +202,15 @@ export default function MasterGolonganPage() {
 
   useEffect(() => {
     if (isClient && ssoData && userData) {
-      loadData();
+      loadData(sortBy, search, sortStatus);
     }
-  }, [isClient, ssoData, userData, loadData]);
+  }, [isClient, ssoData, userData]);
 
   const filterContent = useMemo(
     () => (
       <>
-        <DropDown
-          ref={sortRef}
-          arrData={dataFilterSort}
-          type="pilih"
-          label="Urutkan"
-          forInput="sortBy"
-          defaultValue={sortBy}
-        />
-        <DropDown
-          ref={statusRef}
-          arrData={dataFilterStatus}
-          type="pilih"
-          label="Status"
-          forInput="sortStatus"
-          defaultValue={sortStatus}
-        />
+        <DropDown ref={sortRef} arrData={dataFilterSort} type="pilih" label="Urutkan" forInput="sortBy" defaultValue={sortBy} />
+        <DropDown ref={statusRef} arrData={dataFilterStatus} type="pilih" label="Status" forInput="sortStatus" defaultValue={sortStatus} />
       </>
     ),
     [dataFilterSort, dataFilterStatus, sortBy, sortStatus]
@@ -224,7 +219,7 @@ export default function MasterGolonganPage() {
   const showAddButton = useMemo(() => {
     if (!isClient || !userData) return false;
     return Array.isArray(userData?.permission)
-      ? userData.permission.includes("master_golongan.create")
+      ? userData.permission.includes("master_jabatan.create")
       : false;
   }, [isClient, userData]);
 
@@ -232,11 +227,11 @@ export default function MasterGolonganPage() {
     <MainContent
       layout="Admin"
       loading={loading}
-      title="Golongan"
+      title="Jabatan"
       breadcrumb={[
         { label: "Beranda", href: "/pages/beranda" },
         { label: "Pengaturan Dasar" },
-        { label: "Golongan" },
+        { label: "Jabatan" },
       ]}
     >
       <Formsearch
@@ -245,13 +240,14 @@ export default function MasterGolonganPage() {
         onFilter={handleFilterApply}
         showAddButton={showAddButton}
         showExportButton={false}
-        searchPlaceholder="Cari data golongan"
+        searchPlaceholder="Cari data jabatan"
         addButtonText="Tambah"
         filterContent={filterContent}
       />
+
       <div className="row align-items-center g-3">
         <div className="col-12">
-          <Table data={dataGolongan} onDetail={handleDetail} onEdit={handleEdit} onToggle={handleToggle} />
+          <Table data={dataJabatan} onDetail={handleDetail} onEdit={handleEdit} onToggle={handleToggle} />
           {totalData > 0 && (
             <Paging pageSize={pageSize} pageCurrent={currentPage} totalData={totalData} navigation={handleNavigation} />
           )}
