@@ -206,13 +206,34 @@ export default function TableRow({
         } else if (col === "Aksi") {
           cell = renderAction(row[col], row.id, row.Status);
         } else {
-          cell = (
-            <div
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(row[col]),
-              }}
-            ></div>
-          );
+          const cellValue = row[col];
+
+          // HANDLE TOGGLE OBJECT
+          if (typeof cellValue === "object" && cellValue?.value !== undefined) {
+            cell = (
+              <i
+                className={`bi ${
+                  cellValue.value
+                    ? "bi-toggle-on text-primary"
+                    : "bi-toggle-off text-secondary"
+                }`}
+                style={{ fontSize: 28, cursor: "pointer" }}
+                onClick={() =>
+                  onToggle(row.id, cellValue.column, cellValue.value)
+                }
+              />
+            );
+          }
+
+          else {
+            cell = (
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(String(cellValue)),
+                }}
+              ></div>
+            );
+          }
         }
 
         return (
