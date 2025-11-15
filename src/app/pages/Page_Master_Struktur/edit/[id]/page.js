@@ -15,10 +15,7 @@ export default function EditStrukturPage() {
   const path = useParams();
   const router = useRouter();
   const id = decryptIdUrl(path.id);
-  
-  console.log("params:", path);
-  console.log("decrypted id:", id);
-  
+
   const [loading, setLoading] = useState(true);
   const [parentList, setParentList] = useState([]);
   const [formData, setFormData] = useState({
@@ -27,25 +24,19 @@ export default function EditStrukturPage() {
     parentId: "",
     tanggalFrom: "",
     tanggalUntil: "",
-    strStatus: "Aktif",
   });
 
   const loadDetail = useCallback(async () => {
     try {
-      console.log("Mengambil data dari GetDataStruktur untuk ID:", id);
       const listRes = await fetchData(`${API_LINK}Struktur/GetDataStruktur`, {}, "GET");
       const list = listRes?.data || listRes?.dataList || [];
-      
-      console.log("List dari API:", list);
-      
+
       const found = list.find(item => 
-        item.strId === id || 
+        item.strId === id ||
         item.strId === parseInt(id) ||
         item.strId?.toString() === id?.toString()
       );
-      
-      console.log("Data ditemukan:", found);
-      
+
       if (found) {
         setFormData({
           strId: found.strId || id,
@@ -53,13 +44,11 @@ export default function EditStrukturPage() {
           parentId: found.parentId || "",
           tanggalFrom: (found.tanggalFrom || "").substring(0, 10),
           tanggalUntil: (found.tanggalUntil || "").substring(0, 10),
-          strStatus: found.strStatus || "Aktif",
         });
       } else {
         throw new Error("Data struktur dengan ID " + id + " tidak ditemukan");
       }
     } catch (err) {
-      console.error("Error load detail:", err);
       Toast.error("Gagal memuat data struktur: " + err.message);
       router.back();
     }
@@ -69,9 +58,8 @@ export default function EditStrukturPage() {
     try {
       const res = await fetchData(`${API_LINK}Struktur/GetDataStruktur`, {}, "GET");
       let list = res?.data || res?.dataList || [];
-      
       list = list.sort((a, b) => Number(a.strId) - Number(b.strId));
-      
+
       const formatted = [{ Value: "", Text: "-" }, ...list.map((i) => ({
         Value: i.strId,
         Text: i.strDesc,
@@ -93,17 +81,10 @@ export default function EditStrukturPage() {
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    
-    if (!formData.strId) {
-      Toast.error("Data struktur belum dimuat. Silakan tunggu sebentar.");
-      return;
-    }
-    
-    if (!formData.strDesc.trim()) {
-      Toast.error("Nama struktur tidak boleh kosong.");
-      return;
-    }
-    
+
+    if (!formData.strId) return Toast.error("Data struktur belum dimuat.");
+    if (!formData.strDesc.trim()) return Toast.error("Nama struktur wajib diisi.");
+
     setLoading(true);
 
     try {
@@ -113,32 +94,18 @@ export default function EditStrukturPage() {
         ParentId: formData.parentId || "",
         TanggalFrom: formData.tanggalFrom || "",
         TanggalUntil: formData.tanggalUntil || "",
-        StrStatus: formData.strStatus,
       }).toString();
 
       const url = `${API_LINK}Struktur/EditStruktur?${queryParams}`;
-      console.log("URL dikirim:", url);
-      console.log("Data yang dikirim:", {
-        StrId: formData.strId,
-        NamaStruktur: formData.strDesc.trim(),
-        ParentId: formData.parentId || "",
-        TanggalFrom: formData.tanggalFrom || "",
-        TanggalUntil: formData.tanggalUntil || "",
-        StrStatus: formData.strStatus,
-      });
+      const data = await fetchData(url, {}, "PUT");
 
-      const data = await fetchData(url, {}, "PUT"); 
-      
-      console.log("Response dari server:", data);
-
-      if (data?.message === "SUCCESS" || data?.message === "Berhasil" || data?.message?.toLowerCase().includes("success")) {
+      if (data?.message?.toLowerCase().includes("success")) {
         Toast.success("Data struktur berhasil diperbarui.");
         router.push("/pages/Page_Master_Struktur");
       } else {
         Toast.error(data?.message || "Gagal memperbarui struktur.");
       }
     } catch (err) {
-      console.error("Error saat submit:", err);
       Toast.error("Terjadi kesalahan: " + err.message);
     } finally {
       setLoading(false);
@@ -202,20 +169,6 @@ export default function EditStrukturPage() {
                   name="tanggalUntil"
                   id="tanggalUntil"
                   value={formData.tanggalUntil}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="col-lg-6">
-                <DropDown
-                  label="Status Struktur"
-                  name="strStatus"
-                  id="strStatus"
-                  arrData={[
-                    { Value: "Aktif", Text: "Aktif" },
-                    { Value: "Tidak Aktif", Text: "Tidak Aktif" },
-                  ]}
-                  value={formData.strStatus}
                   onChange={handleChange}
                 />
               </div>
