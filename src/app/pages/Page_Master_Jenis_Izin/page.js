@@ -43,7 +43,6 @@ export default function MasterJenisIzinPage() {
   const [pageSize] = useState(5);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState(dataFilterSort[0].Value);
-  const [sortStatus, setSortStatus] = useState(dataFilterStatus[0].Value);
 
   useEffect(() => {
     setIsClient(true);
@@ -58,14 +57,13 @@ export default function MasterJenisIzinPage() {
     }
   }, [router]);
 
-  const loadData = useCallback(async (sort, cari, status) => {
+  const loadData = useCallback(async (sort, cari) => {
     try {
       setLoading(true);
 
       const response = await fetchData(
         API_LINK + "JenisCuti/GetDataJenisCuti",
         {
-          Status: status,
           ...(cari ? { SearchKeyword: cari } : {}),
           Urut: sort,
         },
@@ -153,17 +151,15 @@ export default function MasterJenisIzinPage() {
   const handleSearch = useCallback(
     (query) => {
       setSearch(query);
-      loadData(sortBy, query, sortStatus);
+      loadData(sortBy, query);
     },
-    [sortBy, sortStatus, loadData]
+    [sortBy, loadData]
   );
 
   const handleFilterApply = useCallback(() => {
     const newSortBy = sortRef.current.value;
-    const newSortStatus = statusRef.current.value;
     setSortBy(newSortBy);
-    setSortStatus(newSortStatus);
-    loadData(newSortBy, search, newSortStatus);
+    loadData(newSortBy, search);
   }, [search, loadData]);
 
   const handleNavigation = useCallback((page) => setCurrentPage(page), []);
@@ -217,21 +213,21 @@ export default function MasterJenisIzinPage() {
         if (!response) throw new Error("Gagal mengubah status.");
         Toast.success("Status berhasil diubah.");
 
-        loadData(sortBy, search, sortStatus);
+        loadData(sortBy, search);
       } catch (err) {
         Toast.error(err.message || "Terjadi kesalahan.");
       } finally {
         setLoading(false);
       }
     },
-    [sortBy, search, sortStatus, loadData]
+    [sortBy, search, loadData]
   );
 
   useEffect(() => {
     if (ssoData && userData) {
-      loadData(sortBy, search, sortStatus);
+      loadData(sortBy, search);
     }
-  }, [ssoData, userData, sortBy, search, sortStatus]);
+  }, [ssoData, userData, sortBy, search]);
 
   const filterContent = useMemo(
     () => (
@@ -244,17 +240,9 @@ export default function MasterJenisIzinPage() {
           forInput="sortBy"
           defaultValue={sortBy}
         />
-        <DropDown
-          ref={statusRef}
-          arrData={dataFilterStatus}
-          type="pilih"
-          label="Status"
-          forInput="sortStatus"
-          defaultValue={sortStatus}
-        />
       </>
     ),
-    [sortBy, sortStatus]
+    [sortBy]
   );
 
   const showAddButton = useMemo(() => {

@@ -134,7 +134,6 @@ export default function MasterJabatanPage() {
       "Nama Jabatan": item.jabatanDeskripsi || item.JabatanDesc || "",
       Status: item.jabatanStatus || item.Status || "Aktif",
       Aksi: [
-        "Detail",
         ...(isClient && userData?.permission?.includes("master_jabatan.edit")
           ? ["Edit", "Toggle"]
           : []),
@@ -167,10 +166,7 @@ export default function MasterJabatanPage() {
   const handleNavigation = useCallback((page) => setCurrentPage(page), []);
 
   const handleAdd = useCallback(() => router.push("/pages/Page_Master_Jabatan/add"), [router]);
-  const handleDetail = useCallback(
-    (id) => router.push(`/pages/Page_Master_Jabatan/detail/${encryptIdUrl(id)}`),
-    [router]
-  );
+
   const handleEdit = useCallback(
     (id) => router.push(`/pages/Page_Master_Jabatan/edit/${encryptIdUrl(id)}`),
     [router]
@@ -247,7 +243,7 @@ export default function MasterJabatanPage() {
 
       <div className="row align-items-center g-3">
         <div className="col-12">
-          <Table data={dataJabatan} onDetail={handleDetail} onEdit={handleEdit} onToggle={handleToggle} />
+          <Table data={dataJabatan} onEdit={handleEdit} onToggle={handleToggle} />
           {totalData > 0 && (
             <Paging pageSize={pageSize} pageCurrent={currentPage} totalData={totalData} navigation={handleNavigation} />
           )}
