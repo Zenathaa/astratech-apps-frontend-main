@@ -3,20 +3,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-// Layout & Components
 import MainContent from "@/components/layout/MainContent";
 import Button from "@/components/common/Button";
 import Toast from "@/components/common/Toast";
 import SweetAlert from "@/components/common/SweetAlert";
 import Table from "@/components/common/Table";
 
-// Libs
 import { API_LINK } from "@/lib/constant";
 import fetchData from "@/lib/fetch";
 import { decryptIdUrl, encryptIdUrl } from "@/lib/encryptor";
 import DateFormatter from "@/lib/dateFormater";
 
-// User Data
 import { getSSOData, getUserData } from "@/context/user";
 
 export default function DetailGolonganPage() {
@@ -27,19 +24,34 @@ export default function DetailGolonganPage() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Permission
   const [isClient, setIsClient] = useState(false);
   const [userData, setUserData] = useState(null);
   const [ssoData, setSsoData] = useState(null);
 
-  // Ambil data user
+  const [golonganInfo, setGolonganInfo] = useState(null);
+
+
   useEffect(() => {
     setIsClient(true);
     setSsoData(getSSOData());
     setUserData(getUserData());
   }, []);
 
-  // Load data tabel
+  const loadHeader = useCallback(async () => {
+    try {
+      const url = `${API_LINK}Golongan/GetListGolongan/${id}`;
+      const res = await fetchData(url, {}, "GET");
+
+      setGolonganInfo(res);
+    } catch (err) {
+      Toast.error("Gagal memuat info golongan.");
+    }
+  }, [id]);
+
+
+
+
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -61,10 +73,10 @@ export default function DetailGolonganPage() {
   useEffect(() => {
     if (ssoData && userData) {
       loadData();
+      loadHeader();
     }
   }, [ssoData, userData, loadData]);
 
-  // Edit
   const handleEdit = useCallback(
     (benId) => {
       router.push(
@@ -77,43 +89,40 @@ export default function DetailGolonganPage() {
   );
 
   const handleToggleStatus = useCallback(
-    (benId) => {
-      // 1. KEMBALIKAN LOGIKA LAMA: Cari data dan hitung status baru
-      const item = data.find((d) => d.benId === benId); 
-      if (!item) {
-        Toast.error("Data benefit tidak ditemukan.");
-        return;
-      }
-      const currentStatus = item.benStatus; 
-      const newStatus = currentStatus === "Aktif" ? "Tidak Aktif" : "Aktif";
+    (benId) => {
+      const item = data.find((d) => d.benId === benId);
+      if (!item) {
+        Toast.error("Data benefit tidak ditemukan.");
+        return;
+      }
+      const currentStatus = item.benStatus;
+      const newStatus = currentStatus === "Aktif" ? "Tidak Aktif" : "Aktif";
 
-      SweetAlert({
-        title: "Ubah Status",
-        text: `Ubah status menjadi "${newStatus}"?`, // Tampilkan status baru
-        icon: "warning",
-        confirmText: "Ya",
-      }).then(async (ok) => {
-        if (ok) {
-          try {
-            // PERBAIKAN: Panggil endpoint [HttpPost("SetStatus")]
-            await fetchData(
-              `${API_LINK}detailGolongan/SetStatus`, // <-- Rute DTO
-              { benId: benId, newStatus: newStatus }, // <-- Kirim DTO di body
-              "POST" 
-            );
+      SweetAlert({
+        title: "Ubah Status",
+        text: `Ubah status menjadi "${newStatus}"?`,
+        icon: "warning",
+        confirmText: "Ya",
+      }).then(async (ok) => {
+        if (ok) {
+          try {
+            await fetchData(
+              `${API_LINK}detailGolongan/SetStatus`,
+              { benId: benId, newStatus: newStatus },
+              "POST"
+            );
 
-            Toast.success("Status berhasil diperbarui.");
-            loadData();
-          } catch (err) {
-            Toast.error("Gagal mengubah status.");
-          }
-        }
-      });
-    },
-    [data, loadData] // <-- KEMBALIKAN 'data' ke dependensi
-  );
+            Toast.success("Status berhasil diperbarui.");
+            loadData();
+          } catch (err) {
+            Toast.error("Gagal mengubah status.");
+          }
+        }
+      });
+    },
+    [data, loadData]
+  );
 
-  // Navigasi
   const handleBack = () => router.push("/pages/Page_Master_Golongan");
 
   const handleTambah = () =>
@@ -121,7 +130,6 @@ export default function DetailGolonganPage() {
       `/pages/Page_Master_DetailGolongan/add?golonganId=${encryptIdUrl(id)}`
     );
 
-  // --- DATA TABEL UNTUK COMPONENT TABLE ---
   const tableData = data.map((item, index) => {
     const allowToggle =
       isClient && userData?.permission?.includes("master_golongan.edit");
@@ -132,38 +140,32 @@ export default function DetailGolonganPage() {
 
       No: index + 1,
       "Plafon Obat": `Rp ${item.benPlafonObat?.toLocaleString("id-ID") ?? "-"}`,
-      "Plafon Lensa Mono": `Rp ${
-        item.benPlafonLensaMono?.toLocaleString("id-ID") ?? "-"
-      }`,
-      "Plafon Lensa Bi": `Rp ${
-        item.benPlafonLensaBi?.toLocaleString("id-ID") ?? "-"
-      }`,
-      "Plafon Rangka": `Rp ${
-        item.benPlafonRangka?.toLocaleString("id-ID") ?? "-"
-      }`,
+      "Plafon Lensa Mono": `Rp ${item.benPlafonLensaMono?.toLocaleString("id-ID") ?? "-"
+        }`,
+      "Plafon Lensa Bi": `Rp ${item.benPlafonLensaBi?.toLocaleString("id-ID") ?? "-"
+        }`,
+      "Plafon Rangka": `Rp ${item.benPlafonRangka?.toLocaleString("id-ID") ?? "-"
+        }`,
       "Status Nikah": item.benStatusPernikahan ?? "-",
       "Tanggal Valid": DateFormatter.formatDate(item.benValidDateFrom),
       "Tanggal Sampai": DateFormatter.formatDate(item.benValidDateUntil),
 
-      // Wajib: status untuk badge & toggle
       Status: item.benStatus,
       benStatus: item.benStatus,
 
-      // Aksi
       Aksi: allowToggle ? ["Edit", "Toggle"] : ["Edit"],
 
-      // Alignment (jumlah harus sesuai kolom)
       Alignment: [
-        "center", // no
-        "center", // plafon obat
-        "center", // mono
-        "center", // bi
-        "center", // rangka
-        "center", // nikah
-        "center", // valid
-        "center", // sampai
-        "center", // status
-        "center", // aksi
+        "center",
+        "center",
+        "center",
+        "center",
+        "center",
+        "center",
+        "center",
+        "center",
+        "center",
+        "center",
       ],
     };
   });
@@ -180,6 +182,22 @@ export default function DetailGolonganPage() {
         { label: "Detail Benefit" },
       ]}
     >
+      <h3> Master Golongan</h3>
+      <div className="mb-3" style={{ lineHeight: "1.8rem" }}>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <span>Nama Golongan</span>
+          <span>:</span>
+          <b>{golonganInfo?.golonganDesc}</b>
+        </div>
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <span>Status</span>
+          <span>:</span>
+          <b>{golonganInfo?.golonganStatus}</b>
+        </div>
+      </div>
+
+
       <div className="mb-3">
         <Button
           classType="primary"

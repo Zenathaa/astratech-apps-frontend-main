@@ -3,20 +3,15 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-// Layout & Wrapper
 import MainContent from "@/components/layout/MainContent";
 import Card from "@/components/common/Card";
 
-// Komponen Form
 import Input from "@/components/common/Input";
 import DropDown from "@/components/common/Dropdown";
 import Calendar from "@/components/common/Calendar";
 import Button from "@/components/common/Button";
 
-// Komponen Feedback
 import Toast from "@/components/common/Toast";
-
-// Libs
 import { API_LINK } from "@/lib/constant";
 import fetchData from "@/lib/fetch";
 import { decryptIdUrl } from "@/lib/encryptor";
@@ -26,39 +21,33 @@ export default function AddDetailGolonganPage() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   
-  // State untuk form
   const [golonganId, setGolonganId] = useState(null);
   const [plafonObat, setPlafonObat] = useState("");
   const [plafonLensaMono, setPlafonLensaMono] = useState("");
   const [plafonLensaBi, setPlafonLensaBi] = useState("");
   const [plafonRangka, setPlafonRangka] = useState("");
   const [statusNikah, setStatusNikah] = useState("");
-  const [rangeDate, setRangeDate] = useState([null, null]); // [dari, sampai]
-  const [createdBy, setCreatedBy] = useState("admin_dev"); // Hardcode untuk testing
+  const [rangeDate, setRangeDate] = useState([null, null]); 
+  const [createdBy, setCreatedBy] = useState("admin_dev");
   
   const [errors, setErrors] = useState({});
 
-  // Data untuk dropdown
   const dataStatusNikah = [
     { Value: "Lajang", Text: "Lajang" },
     { Value: "Menikah", Text: "Menikah" },
   ];
 
-  // Baca GolonganId dari URL
   useEffect(() => {
     const encryptedId = searchParams.get("golonganId");
     if (encryptedId) {
       const decryptedId = decryptIdUrl(encryptedId);
       setGolonganId(decryptedId);
     } else {
-      // Jika tidak ada ID, mungkin tampilkan dropdown untuk memilih Golongan
       console.warn("Tidak ada golonganId di URL");
-      // Untuk saat ini, kita anggap ID wajib ada
     }
   }, [searchParams]);
 
   const handleBack = useCallback(() => {
-    // Kembali ke halaman detail golongan (jika ada ID) atau list golongan
     if (golonganId) {
       router.back();
     } else {
@@ -93,9 +82,9 @@ export default function AddDetailGolonganPage() {
         benPlafonLensaBi: parseFloat(plafonLensaBi) || 0,
         benPlafonRangka: parseFloat(plafonRangka) || 0,
         benStatusPernikahan: statusNikah,
-        benValidDateFrom: rangeDate[0].toISOString().split('T')[0], // Format YYYY-MM-DD
-        benValidDateUntil: rangeDate[1].toISOString().split('T')[0], // Format YYYY-MM-DD
-        benCreatedBy: createdBy, // Sesuai C# DTO
+        benValidDateFrom: rangeDate[0].toISOString().split('T')[0], 
+        benValidDateUntil: rangeDate[1].toISOString().split('T')[0], 
+        benCreatedBy: createdBy,
       };
       
       await fetchData(
@@ -105,7 +94,7 @@ export default function AddDetailGolonganPage() {
       );
 
       Toast.success("Data benefit berhasil disimpan.");
-      handleBack(); // Kembali ke halaman sebelumnya
+      handleBack(); 
     } catch (err) {
       Toast.error("Gagal menyimpan data: " + err.message);
     } finally {
