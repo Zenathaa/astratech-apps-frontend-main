@@ -3,21 +3,16 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-// Layout & Wrapper
 import MainContent from "@/components/layout/MainContent";
 import Card from "@/components/common/Card";
-
-// Komponen Form
 import Input from "@/components/common/Input";
 import DropDown from "@/components/common/Dropdown";
 import Calendar from "@/components/common/Calendar";
 import Button from "@/components/common/Button";
 
-// Komponen Feedback
 import Toast from "@/components/common/Toast";
-import Loading from "@/components/common/Loading"; // Import Loading
+import Loading from "@/components/common/Loading"; 
 
-// Libs
 import { API_LINK } from "@/lib/constant";
 import fetchData from "@/lib/fetch";
 import { decryptIdUrl } from "@/lib/encryptor";
@@ -25,47 +20,41 @@ import { decryptIdUrl } from "@/lib/encryptor";
 export default function EditDetailGolonganPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(false); // Untuk submit
-  const [pageLoading, setPageLoading] = useState(true); // Untuk memuat data
+  const [loading, setLoading] = useState(false); 
+  const [pageLoading, setPageLoading] = useState(true); 
   
-  // State untuk form
   const [benId, setBenId] = useState(null);
   const [plafonObat, setPlafonObat] = useState("");
   const [plafonLensaMono, setPlafonLensaMono] = useState("");
   const [plafonLensaBi, setPlafonLensaBi] = useState("");
   const [plafonRangka, setPlafonRangka] = useState("");
   const [statusNikah, setStatusNikah] = useState("");
-  const [rangeDate, setRangeDate] = useState([null, null]); // [dari, sampai]
-  const [modifBy, setModifBy] = useState("admin_dev_edit"); // Hardcode untuk testing
+  const [rangeDate, setRangeDate] = useState([null, null]);
+  const [modifBy, setModifBy] = useState("admin_dev_edit");
   
   const [errors, setErrors] = useState({});
 
-  // Data untuk dropdown
   const dataStatusNikah = [
     { Value: "Lajang", Text: "Lajang" },
     { Value: "Menikah", Text: "Menikah" },
   ];
 
-  // Fungsi untuk memuat data yang ada
   const loadData = useCallback(async (idToLoad) => {
     if (!idToLoad) return;
     setPageLoading(true);
     try {
-      // ASUMSI: Anda punya endpoint ini di C#
       const response = await fetchData(
         `${API_LINK}detailGolongan/GetDetailBenefit/${idToLoad}`, 
         {}, 
         "GET"
       );
       
-      // API akan mengembalikan data benefit (camelCase)
       setPlafonObat(response.benPlafonObat || "");
       setPlafonLensaMono(response.benPlafonLensaMono || "");
       setPlafonLensaBi(response.benPlafonLensaBi || "");
       setPlafonRangka(response.benPlafonRangka || "");
       setStatusNikah(response.benStatusPernikahan || "");
       
-      // Set state kalender
       if (response.benValidDateFrom && response.benValidDateUntil) {
         setRangeDate([
           new Date(response.benValidDateFrom), 
@@ -75,19 +64,18 @@ export default function EditDetailGolonganPage() {
       
     } catch (err) {
       Toast.error("Gagal memuat data benefit: " + err.message);
-      router.back(); // Kembali jika data gagal dimuat
+      router.back();
     } finally {
       setPageLoading(false);
     }
   }, [router]);
 
-  // Baca benId dari URL saat komponen dimuat
   useEffect(() => {
     const encryptedId = searchParams.get("benId");
     if (encryptedId) {
       const decryptedId = decryptIdUrl(encryptedId);
       setBenId(decryptedId);
-      loadData(decryptedId); // Muat data setelah ID didapat
+      loadData(decryptedId);
     } else {
       Toast.error("ID Benefit tidak valid.");
       router.back();
@@ -95,7 +83,7 @@ export default function EditDetailGolonganPage() {
   }, [searchParams, router, loadData]);
 
   const handleBack = useCallback(() => {
-    router.back(); // Kembali ke halaman detail
+    router.back();
   }, [router]);
 
   const  validateForm = () => {
@@ -118,7 +106,6 @@ export default function EditDetailGolonganPage() {
 
     setLoading(true);
     try {
-      // DTO untuk Update (sesuai C#)
       const payload = {
         benId: parseInt(benId, 10),
         benPlafonObat: parseFloat(plafonObat) || 0,
@@ -128,17 +115,17 @@ export default function EditDetailGolonganPage() {
         benStatusPernikahan: statusNikah,
         benValidDateFrom: rangeDate[0].toISOString().split('T')[0],
         benValidDateUntil: rangeDate[1].toISOString().split('T')[0],
-        benModifBy: modifBy, // DTO C# Anda memerlukan ini
+        benModifBy: modifBy, 
       };
       
       await fetchData(
-        `${API_LINK}detailGolongan/UpdateDetailGolongan`, // Panggil endpoint Update
+        `${API_LINK}detailGolongan/UpdateDetailGolongan`, 
         payload,
-        "PUT" // Gunakan method PUT
+        "PUT"
       );
 
       Toast.success("Data benefit berhasil diupdate.");
-      handleBack(); // Kembali ke halaman detail
+      handleBack(); 
     } catch (err) {
       Toast.error("Gagal mengupdate data: " + err.message);
     } finally {
@@ -149,7 +136,7 @@ export default function EditDetailGolonganPage() {
   return (
     <MainContent
       layout="Admin"
-      loading={pageLoading} // Gunakan pageLoading di sini
+      loading={pageLoading}
       title="Edit Data Benefit"
       breadcrumb={[
         { label: "Beranda", href: "/" },
@@ -160,7 +147,6 @@ export default function EditDetailGolonganPage() {
       ]}
     >
       <Card>
-        {/* Tampilkan Loading overlay jika form belum siap */}
         <Loading loading={pageLoading} /> 
         
         {!pageLoading && (
