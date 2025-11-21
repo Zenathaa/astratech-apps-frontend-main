@@ -30,7 +30,7 @@ export default function MasterGolonganPage() {
   const dataFilterSort = useMemo(
     () => [
       { Value: "[gol_desc] asc", Text: "Nama Golongan [↑]" },
-      { Value: "[gol_desc] desc", Text: "Nama Golongan [↓]" },
+      { Value: "[gol_desc] desc", Text: "Nama Golongan [↓]" }
     ],
     []
   );
@@ -38,7 +38,7 @@ export default function MasterGolonganPage() {
   const dataFilterStatus = useMemo(
     () => [
       { Value: "Aktif", Text: "Aktif" },
-      { Value: "Tidak Aktif", Text: "Tidak Aktif" },
+      { Value: "Tidak Aktif", Text: "Tidak Aktif" }
     ],
     []
   );
@@ -46,7 +46,7 @@ export default function MasterGolonganPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(5);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("[id] asc");
+  const [sortBy, setSortBy] = useState("[gol_desc] asc");
   const [sortStatus, setSortStatus] = useState("Aktif");
   const [totalData, setTotalData] = useState(0);
 
@@ -63,39 +63,60 @@ export default function MasterGolonganPage() {
     }
   }, [router]);
 
-  const loadData = useCallback(async (sort = sortBy, keyword = search, status = sortStatus) => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (keyword) params.append("SearchKeyword", keyword);
-      if (status) params.append("Status", status);
-      if (sort) params.append("Urut", sort);
+  const loadData = useCallback(
+    async (
+      sort = "[gol_desc] asc",
+      keyword = search,
+      status = sortStatus
+    ) => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams();
+        if (keyword) params.append("SearchKeyword", keyword);
+        if (status) params.append("Status", status);
+        params.append("Urut", sort);
 
-      const url = `${API_LINK}Golongan/GetDataGolongan?${params.toString()}`;
-      const response = await fetchData(url, {}, "GET");
+        const url = `${API_LINK}Golongan/GetDataGolongan?${params.toString()}`;
+        const response = await fetchData(url, {}, "GET");
 
-      if (!response) throw new Error("Tidak ada respon dari server.");
-      const dataList = response.data || response.dataList || response.items || [];
+        if (!response) throw new Error("Tidak ada respon dari server.");
 
-      setAllDataGolongan(dataList);
-      setTotalData(dataList.length);
-      setCurrentPage(1);
-    } catch (err) {
-      Toast.error(err.message || "Gagal memuat data golongan.");
-      setAllDataGolongan([]);
-      setDataGolongan([]);
-      setTotalData(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [sortBy, search, sortStatus]);
+        const dataList =
+          response.data || response.dataList || response.items || [];
+
+        dataList.sort((a, b) =>
+          (a.golonganDesc ||
+            a.GolonganDesc ||
+            a.gol_desc ||
+            "").localeCompare(
+            b.golonganDesc || b.GolonganDesc || b.gol_desc || ""
+          )
+        );
+
+        setAllDataGolongan(dataList);
+        setTotalData(dataList.length);
+        setCurrentPage(1);
+      } catch (err) {
+        Toast.error(err.message || "Gagal memuat data golongan.");
+        setAllDataGolongan([]);
+        setDataGolongan([]);
+        setTotalData(0);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search, sortStatus]
+  );
 
   useEffect(() => {
     let temp = [...allDataGolongan];
 
     if (search.trim() !== "") {
       temp = temp.filter((item) =>
-        (item.golonganDesc || item.GolonganDesc || "")
+        (item.golonganDesc ||
+          item.GolonganDesc ||
+          item.gol_desc ||
+          "")
           .toLowerCase()
           .includes(search.toLowerCase())
       );
@@ -103,67 +124,91 @@ export default function MasterGolonganPage() {
 
     if (sortStatus) {
       temp = temp.filter(
-        (item) => (item.golonganStatus || item.Status || "Aktif") === sortStatus
+        (item) =>
+          (item.golonganStatus || item.Status || "Aktif") === sortStatus
       );
     }
 
-    if (sortBy === "[id] asc") temp.sort((a, b) => a.id - b.id);
-    else if (sortBy === "[id] desc") temp.sort((a, b) => b.id - a.id);
-    else if (sortBy === "[gol_desc] asc")
+    if (sortBy === "[gol_desc] asc")
       temp.sort((a, b) =>
-        (a.golonganDesc || a.GolonganDesc || "").localeCompare(b.golonganDesc || b.GolonganDesc || "")
+        (a.golonganDesc || a.GolonganDesc || a.gol_desc || "").localeCompare(
+          b.golonganDesc || b.GolonganDesc || b.gol_desc || ""
+        )
       );
     else if (sortBy === "[gol_desc] desc")
       temp.sort((a, b) =>
-        (b.golonganDesc || b.GolonganDesc || "").localeCompare(a.golonganDesc || a.GolonganDesc || "")
+        (b.golonganDesc || b.GolonganDesc || b.gol_desc || "").localeCompare(
+          a.golonganDesc || a.GolonganDesc || a.gol_desc || ""
+        )
       );
 
-    const startIndex = (currentPage - 1) * pageSize;
-    const pagedList = temp.slice(startIndex, startIndex + pageSize);
+    const start = (currentPage - 1) * pageSize;
+    const pagedList = temp.slice(start, start + pageSize);
 
     const tableData = pagedList.map((item, idx) => ({
-      No: startIndex + idx + 1,
+      No: start + idx + 1,
       id: item.id,
-      "Nama Golongan": item.golonganDesc || item.GolonganDesc || "",
+      "Nama Golongan":
+        item.golonganDesc || item.GolonganDesc || item.gol_desc || "",
       Status: item.golonganStatus || item.Status || "Aktif",
       Aksi: [
         "Detail",
         ...(isClient && userData?.permission?.includes("master_golongan.edit")
           ? ["Edit", "Toggle"]
-          : []),
+          : [])
       ],
-      Alignment: ["center", "center", "center", "center"],
+      Alignment: ["center", "center", "center", "center"]
     }));
 
     setDataGolongan(tableData);
     setTotalData(temp.length);
-  }, [allDataGolongan, search, currentPage, pageSize, sortBy, sortStatus, isClient, userData]);
+  }, [
+    allDataGolongan,
+    search,
+    currentPage,
+    pageSize,
+    sortBy,
+    sortStatus,
+    isClient,
+    userData
+  ]);
 
   const handleSearch = useCallback(
-    (query) => {
-      setSearch(query);
-      loadData(sortBy, query, sortStatus);
+    (q) => {
+      setSearch(q);
+      loadData(sortBy, q, sortStatus);
     },
     [sortBy, sortStatus, loadData]
   );
 
   const handleFilterApply = useCallback(() => {
-    const newSortBy = sortRef.current?.value || sortBy;
-    const newSortStatus = statusRef.current?.value || sortStatus;
-    setSortBy(newSortBy);
-    setSortStatus(newSortStatus);
-    loadData(newSortBy, search, newSortStatus);
+    const s1 = sortRef.current?.value || sortBy;
+    const s2 = statusRef.current?.value || sortStatus;
+    setSortBy(s1);
+    setSortStatus(s2);
+    loadData(s1, search, s2);
   }, [sortBy, sortStatus, search, loadData]);
 
-  const handleNavigation = useCallback((page) => setCurrentPage(page), []);
+  const handleNavigation = useCallback((p) => setCurrentPage(p), []);
 
-  const handleAdd = useCallback(() => router.push("/pages/Page_Master_Golongan/add"), [router]);
-  const handleDetail = useCallback(
-    (id) => router.push(`/pages/Page_Master_Golongan/detail/${encryptIdUrl(id)}`),
+  const handleAdd = useCallback(
+    () => router.push("/pages/Page_Master_Golongan/add"),
     [router]
   );
+
+  const handleDetail = useCallback(
+    (id) =>
+      router.push(
+        `/pages/Page_Master_Golongan/detail/${encryptIdUrl(id)}`
+      ),
+    [router]
+  );
+
   const handleEdit = useCallback(
-    (id) => router.push(`/pages/Page_Master_Golongan/edit/${encryptIdUrl(id)}`),
+    (id) =>
+      router.push(
+        `/pages/Page_Master_Golongan/edit/${encryptIdUrl(id)}`
+      ),
     [router]
   );
 
@@ -173,13 +218,17 @@ export default function MasterGolonganPage() {
         title: "Ubah Status Golongan",
         text: "Apakah Anda yakin ingin mengubah status golongan ini?",
         icon: "warning",
-        confirmText: "Ya, ubah!",
+        confirmText: "Ya, ubah!"
       });
       if (!result) return;
 
       setLoading(true);
       try {
-        await fetchData(`${API_LINK}Golongan/SetStatusGolongan/${id}`, {}, "POST");
+        await fetchData(
+          `${API_LINK}Golongan/SetStatusGolongan/${id}`,
+          {},
+          "POST"
+        );
         Toast.success("Status golongan berhasil diubah.");
         await loadData(sortBy, search, sortStatus);
       } catch (err) {
@@ -192,9 +241,7 @@ export default function MasterGolonganPage() {
   );
 
   useEffect(() => {
-    if (isClient && ssoData && userData) {
-      loadData();
-    }
+    if (isClient && ssoData && userData) loadData();
   }, [isClient, ssoData, userData, loadData]);
 
   const filterContent = useMemo(
@@ -236,7 +283,7 @@ export default function MasterGolonganPage() {
       breadcrumb={[
         { label: "Beranda", href: "/pages/beranda" },
         { label: "Pengaturan Dasar" },
-        { label: "Golongan" },
+        { label: "Golongan" }
       ]}
     >
       <Formsearch
@@ -249,11 +296,23 @@ export default function MasterGolonganPage() {
         addButtonText="Tambah"
         filterContent={filterContent}
       />
+
       <div className="row align-items-center g-3">
         <div className="col-12">
-          <Table data={dataGolongan} onDetail={handleDetail} onEdit={handleEdit} onToggle={handleToggle} />
+          <Table
+            data={dataGolongan}
+            onDetail={handleDetail}
+            onEdit={handleEdit}
+            onToggle={handleToggle}
+          />
+
           {totalData > 0 && (
-            <Paging pageSize={pageSize} pageCurrent={currentPage} totalData={totalData} navigation={handleNavigation} />
+            <Paging
+              pageSize={pageSize}
+              pageCurrent={currentPage}
+              totalData={totalData}
+              navigation={handleNavigation}
+            />
           )}
         </div>
       </div>

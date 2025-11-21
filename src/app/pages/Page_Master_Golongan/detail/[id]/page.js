@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import MainContent from "@/components/layout/MainContent";
+import Button from "@/components/common/Button";
 import Toast from "@/components/common/Toast";
 import SweetAlert from "@/components/common/SweetAlert";
 import Table from "@/components/common/Table";
@@ -18,8 +19,9 @@ import { getSSOData, getUserData } from "@/context/user";
 export default function DetailGolonganPage() {
   const path = useParams();
   const router = useRouter();
-  const id = decryptIdUrl(path.id); 
-  const [data, setData] = useState(null);
+  const id = decryptIdUrl(path.id);
+
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [isClient, setIsClient] = useState(false);
@@ -27,7 +29,6 @@ export default function DetailGolonganPage() {
   const [ssoData, setSsoData] = useState(null);
 
   const [golonganInfo, setGolonganInfo] = useState(null);
-
 
   useEffect(() => {
     setIsClient(true);
@@ -46,50 +47,23 @@ export default function DetailGolonganPage() {
     }
   }, [id]);
 
-
-
-
-
   const loadData = useCallback(async () => {
-    if (!id) {
-      Toast.error("ID golongan tidak valid.");
-      setLoading(false);
-      router.back();
-      return;
-    }
-
     try {
       setLoading(true);
-      const response = await fetchData(
-        `${API_LINK}Golongan/GetListGolongan?Id=${encodeURIComponent(id)}`,
+
+      const res = await fetchData(
+        `${API_LINK}detailGolongan/GetDataDetailGolongan?GolonganId=${id}`,
         {},
         "GET"
       );
 
-      const g = response?.data?.[0];
-
-      if (!g) {
-        Toast.error("Data golongan tidak ditemukan.");
-        setData(null);
-      } else {
-        setData({
-          golonganDesc: g.gol_desc,
-          golonganStatus: g.gol_status,
-          BenPlafonObat: g.ben_plafon_obat ?? null,
-          BenPlafonLensaMono: g.ben_plafon_lensa_mono ?? null,
-          BenPlafonLensaBi: g.ben_plafon_lensa_bi ?? null,
-          BenPlafonRangka: g.ben_plafon_rangka ?? null,
-          BenStatusPernikahan: g.ben_status_pernikahan ?? null,
-        });
-      }
+      setData(res.data || []);
     } catch (err) {
-      console.error(err);
-      Toast.error("Gagal memuat data golongan.");
-      setData(null);
+      Toast.error("Gagal memuat data.");
     } finally {
       setLoading(false);
     }
-  }, [id, router]);
+  }, [id]);
 
   useEffect(() => {
     if (ssoData && userData) {
@@ -161,12 +135,15 @@ export default function DetailGolonganPage() {
 
       No: index + 1,
       "Plafon Obat": `Rp ${item.benPlafonObat?.toLocaleString("id-ID") ?? "-"}`,
-      "Plafon Lensa Mono": `Rp ${item.benPlafonLensaMono?.toLocaleString("id-ID") ?? "-"
-        }`,
-      "Plafon Lensa Bi": `Rp ${item.benPlafonLensaBi?.toLocaleString("id-ID") ?? "-"
-        }`,
-      "Plafon Rangka": `Rp ${item.benPlafonRangka?.toLocaleString("id-ID") ?? "-"
-        }`,
+      "Plafon Lensa Mono": `Rp ${
+        item.benPlafonLensaMono?.toLocaleString("id-ID") ?? "-"
+      }`,
+      "Plafon Lensa Bi": `Rp ${
+        item.benPlafonLensaBi?.toLocaleString("id-ID") ?? "-"
+      }`,
+      "Plafon Rangka": `Rp ${
+        item.benPlafonRangka?.toLocaleString("id-ID") ?? "-"
+      }`,
       "Status Nikah": item.benStatusPernikahan ?? "-",
       "Tanggal Valid": DateFormatter.formatDate(item.benValidDateFrom),
       "Tanggal Sampai": DateFormatter.formatDate(item.benValidDateUntil),
@@ -195,29 +172,28 @@ export default function DetailGolonganPage() {
     <MainContent
       layout="Admin"
       loading={loading}
-      title="Detail Golongan"
+      title="Detail Benefit Golongan"
       breadcrumb={[
         { label: "Beranda", href: "/" },
         { label: "Pengaturan Dasar" },
         { label: "Golongan", href: "/pages/Page_Master_Golongan" },
-        { label: "Detail" },
+        { label: "Detail Benefit" },
       ]}
     >
-      <h3> Master Golongan</h3>
+      <h3>Master Golongan</h3>
       <div className="mb-3" style={{ lineHeight: "1.8rem" }}>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <span>Nama Golongan</span>
-          <span>:</span>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <span style={{ width: "125px" }}>Nama Golongan</span>
+          <span style={{ marginRight: "10px" }}>:</span>
           <b>{golonganInfo?.golonganDesc}</b>
         </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
-          <span>Status</span>
-          <span>:</span>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <span style={{ width: "125px" }}>Status</span>
+          <span style={{ marginRight: "10px" }}>:</span>
           <b>{golonganInfo?.golonganStatus}</b>
         </div>
       </div>
-
 
       <div className="mb-3">
         <Button
@@ -230,36 +206,20 @@ export default function DetailGolonganPage() {
 
       <div className="card border-0 shadow-lg">
         <div className="card-body p-4">
-          {data ? (
-            <div className="row">
-              <DetailItem label="Nama Golongan" value={data.golonganDesc} />
-              <DetailItem label="Status" value={<Badge status={data.golonganStatus} />} />
-              <DetailItem label="Plafon Obat" value={data.BenPlafonObat} />
-              <DetailItem label="Plafon Lensa Mono" value={data.BenPlafonLensaMono} />
-              <DetailItem label="Plafon Lensa Bi" value={data.BenPlafonLensaBi} />
-              <DetailItem label="Plafon Rangka" value={data.BenPlafonRangka} />
-              <DetailItem label="Status Pernikahan" value={data.BenStatusPernikahan} />
-            </div>
-          ) : (
-            <p className="text-center text-muted">Tidak ada data untuk golongan ini.</p>
-          )}
+          <Table
+            data={tableData}
+            onEdit={handleEdit}
+            onToggle={handleToggleStatus}
+          />
+        </div>
 
-          <div className="row mt-4">
-            <div className="col-12 d-flex justify-content-end gap-2">
-              <Button
-                classType="secondary"
-                label="Kembali"
-                onClick={handleBack}
-                type="button"
-              />
-              <Button
-                classType="primary"
-                iconName="pencil"
-                label="Edit"
-                onClick={handleEdit}
-                type="button"
-              />
-            </div>
+        <div className="card-footer bg-white p-4">
+          <div className="d-flex justify-content-end">
+            <Button
+              classType="secondary"
+              label="Kembali"
+              onClick={handleBack}
+            />
           </div>
         </div>
       </div>

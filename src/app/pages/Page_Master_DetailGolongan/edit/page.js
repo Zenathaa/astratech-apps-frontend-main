@@ -239,7 +239,6 @@ export default function EditDetailGolonganPage() {
                     iconName="floppy"
                     label="Update" 
                     type="submit"
-                    isLoading={loading} 
                   />
                 </div>
               </div>
