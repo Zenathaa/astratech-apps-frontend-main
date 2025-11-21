@@ -90,8 +90,6 @@ export default function DetailGolonganPage() {
         Toast.error("Data benefit tidak ditemukan.");
         return;
       }
-      const currentStatus = item.benStatus;
-      const newStatus = currentStatus === "Aktif" ? "Tidak Aktif" : "Aktif";
 
       SweetAlert({
         title: "Ubah Status",
@@ -149,7 +147,6 @@ export default function DetailGolonganPage() {
       "Tanggal Sampai": DateFormatter.formatDate(item.benValidDateUntil),
 
       Status: item.benStatus,
-      benStatus: item.benStatus,
 
       Aksi: allowToggle ? ["Edit", "Toggle"] : ["Edit"],
 
